@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
   <title>Mermaid Live</title>
   <link rel="stylesheet" href="styles.css">
   <style>
@@ -53,13 +52,14 @@
   </style>
   <script>
     window.nodeRequire = require;
-    delete window.require;
-    delete window.module;
-    delete window.exports;
+    var path = nodeRequire('path');
+    var url = nodeRequire('url');
+    var monacoBase = path.join(__dirname, '..', '..', 'node_modules', 'monaco-editor', 'min');
+    var monacoBaseUrl = url.pathToFileURL(monacoBase).href;
   </script>
   <script>
-    var require = {
-      paths: { vs: '../../node_modules/monaco-editor/min/vs' }
+    window.require = {
+      baseUrl: monacoBaseUrl
     };
   </script>
   <script src="../../node_modules/monaco-editor/min/vs/loader.js"></script>
@@ -89,8 +89,14 @@
       </div>
     </div>
   </div>
+  <script src="app.js"></script>
   <script>
-    nodeRequire('./app.js');
+    window.onerror = function (msg, url, line, col, err) {
+      var el = document.createElement('div');
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#a31515;color:#fff;padding:20px;z-index:9999;font-family:monospace;font-size:13px;white-space:pre-wrap;max-height:50vh;overflow:auto;';
+      el.textContent = 'ERROR: ' + msg + '\nat ' + url + ':' + line + ':' + col + '\n' + (err && err.stack || '');
+      document.body.appendChild(el);
+    };
   </script>
 </body>
 </html>
