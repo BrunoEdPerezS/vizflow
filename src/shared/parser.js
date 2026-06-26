@@ -41,7 +41,13 @@ function parseMmd(content) {
     }
 
     if (line.trim().startsWith('%%#')) {
-      annotations.push(line.trim().replace(/^%%#\s*/, ''));
+      const raw = line.trim().replace(/^%%#\s*/, '');
+      const match = raw.match(/^@(-?\d+),(-?\d+)\s*(.*)$/);
+      if (match) {
+        annotations.push({ text: match[3] || '', x: parseInt(match[1]), y: parseInt(match[2]), lineIndex: i });
+      } else {
+        annotations.push({ text: raw, x: null, y: null, lineIndex: i });
+      }
       continue;
     }
 

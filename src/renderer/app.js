@@ -197,18 +197,86 @@
     });
   }
 
+  function updateAnnotationLineInEditor(annotationIndex, x, y) {
+    if (!editor) return;
+    var content = getEditorContent();
+    var lines = content.split('\n');
+    var count = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var trimmed = lines[i].trim();
+      if (!trimmed.startsWith('%%#')) continue;
+      if (count === annotationIndex) {
+        var indent = lines[i].match(/^(\s*)/)[0];
+        var raw = trimmed.replace(/^%%#\s*/, '');
+        var textOnly = raw.replace(/\s*@-?\d+,-?\d+\s*/g, ' ').replace(/\s+/g, ' ').trim();
+        lines[i] = indent + '%%# @' + Math.round(x) + ',' + Math.round(y) + ' ' + textOnly;
+        break;
+      }
+      count++;
+    }
+    setEditorContent(lines.join('\n'));
+    if (saveTimeout) { clearTimeout(saveTimeout); }
+    saveTimeout = setTimeout(function () {
+      ipcRenderer.invoke('file:save', editor.getValue());
+    }, 500);
+    var parsed = parseMmd(lines.join('\n'));
+    renderAnnotations(parsed.annotations);
+  }
+
   function renderAnnotations(annotations) {
     var overlay = document.getElementById('annotations-overlay');
     if (!overlay) return;
     overlay.innerHTML = '';
     if (!annotations || annotations.length === 0) return;
     var baseTop = 10, baseLeft = 10, step = 40;
-    annotations.forEach(function (text, i) {
+    var lastBottom = 0;
+
+    annotations.forEach(function (ann, annIdx) {
       var note = document.createElement('div');
       note.className = 'sticky-note';
-      note.textContent = text;
-      note.style.top = (baseTop + i * step) + 'px';
-      note.style.left = (baseLeft + i * 15) + 'px';
+      note.textContent = ann.text;
+
+      if (ann.x !== null && ann.y !== null) {
+        note.style.left = ann.x + 'px';
+        note.style.top = ann.y + 'px';
+      } else {
+        var top = Math.max(baseTop, lastBottom + 8);
+        note.style.top = top + 'px';
+        note.style.left = (baseLeft + annIdx * 15) + 'px';
+        lastBottom = top + 24;
+      }
+
+      var dragStartX, dragStartY, noteStartLeft, noteStartTop;
+      note.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        noteStartLeft = parseFloat(note.style.left) || 0;
+        noteStartTop = parseFloat(note.style.top) || 0;
+        note.classList.add('dragging');
+
+        function onMove(me) {
+          var dx = (me.clientX - dragStartX) / zoomScale;
+          var dy = (me.clientY - dragStartY) / zoomScale;
+          note.style.left = (noteStartLeft + dx) + 'px';
+          note.style.top = (noteStartTop + dy) + 'px';
+        }
+
+        function onUp(ue) {
+          note.classList.remove('dragging');
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+          var finalX = parseFloat(note.style.left) || 0;
+          var finalY = parseFloat(note.style.top) || 0;
+          updateAnnotationLineInEditor(annIdx, finalX, finalY);
+        }
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+      });
+
       overlay.appendChild(note);
     });
   }

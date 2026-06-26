@@ -7,6 +7,7 @@ const { startWatcher, stopWatcher } = require('./file-watcher');
 let mainWindow = null;
 let filePath = null;
 let selfSaving = false;
+let selfSavingTimer = null;
 
 function getFilePath() {
   return filePath;
@@ -18,6 +19,13 @@ function getSelfSaving() {
 
 function setSelfSaving(val) {
   selfSaving = val;
+  if (selfSavingTimer) { clearTimeout(selfSavingTimer); selfSavingTimer = null; }
+  if (val) {
+    selfSavingTimer = setTimeout(function () {
+      selfSaving = false;
+      selfSavingTimer = null;
+    }, 500);
+  }
 }
 
 function createWindow() {

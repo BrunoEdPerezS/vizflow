@@ -23,7 +23,6 @@ function watchFile() {
     watcher = fs.watch(filePath, (eventType) => {
       if (eventType === 'change') {
         if (getSelfSaving && getSelfSaving()) {
-          setSelfSaving(false);
           return;
         }
 
