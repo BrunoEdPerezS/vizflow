@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Mermaid Live</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --bg-primary: #1e1e1e;
+      --bg-secondary: #252526;
+      --bg-toolbar: #2d2d30;
+      --text-primary: #cccccc;
+      --text-secondary: #969696;
+      --border-color: #3e3e42;
+      --accent-color: #007acc;
+      --sticky-bg: rgba(180, 160, 80, 0.25);
+      --sticky-text: #e8d888;
+      --error-bg: #5a1d1d;
+      --error-text: #f48771;
+      --error-border: #c24038;
+    }
+
+    :root.theme-light {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f3f3f3;
+      --bg-toolbar: #e8e8e8;
+      --text-primary: #1e1e1e;
+      --text-secondary: #616161;
+      --border-color: #d4d4d4;
+      --accent-color: #007acc;
+      --sticky-bg: rgba(255, 248, 180, 0.7);
+      --sticky-text: #6b5b00;
+      --error-bg: #fde7e7;
+      --error-text: #a31515;
+      --error-border: #e51400;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+    }
+  </style>
+  <script>
+    window.nodeRequire = require;
+    delete window.require;
+    delete window.module;
+    delete window.exports;
+  </script>
+  <script>
+    var require = {
+      paths: { vs: '../../node_modules/monaco-editor/min/vs' }
+    };
+  </script>
+  <script src="../../node_modules/monaco-editor/min/vs/loader.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div id="toolbar">
+      <div id="toolbar-left">
+        <span id="file-name">diagram.mmd</span>
+      </div>
+      <div id="toolbar-right">
+        <button id="btn-theme" title="Toggle theme">&#9788;</button>
+        <button id="btn-export-svg" title="Export SVG">SVG</button>
+        <button id="btn-export-png" title="Export PNG">PNG</button>
+      </div>
+    </div>
+    <div id="main-content">
+      <div id="editor-pane">
+        <div id="editor-container"></div>
+      </div>
+      <div id="preview-pane">
+        <div id="preview-container">
+          <div id="mermaid-preview"></div>
+          <div id="annotations-overlay"></div>
+        </div>
+        <div id="preview-error" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    nodeRequire('./app.js');
+  </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+{
+  "name": "mermaid-live",
+  "version": "1.0.0",
+  "description": "Live Mermaid diagram editor with LLM file-sync bridge",
+  "main": "src/main/main.js",
+  "bin": {
+    "mermaid-live": "./src/main/main.js"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "ai.vizflow.mermaid-live",
+    "productName": "Mermaid Live",
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": null
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": null
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": null
+    },
+    "fileAssociations": [
+      {
+        "ext": "mmd",
+        "name": "Mermaid Diagram",
+        "description": "Mermaid Diagram File",
+        "role": "Editor"
+      }
+    ]
+  },
+  "keywords": [
+    "mermaid",
+    "diagram",
+    "electron",
+    "live-editor"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^5.1.0",
+    "mermaid": "^11.16.0",
+    "monaco-editor": "^0.55.1"
+  },
+  "devDependencies": {
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3"
+  }
+}
