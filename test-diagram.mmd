@@ -8,5 +8,13 @@ graph TD
     B -->|Yes| C[Great!]
     B -->|No| D[Debug]
     D --> B
+    B --> E((Not working))
+    C --> F[Ship it!]
+    F --> G{Production?}
+    G -->|Yes| H[Monitor]
+    G -->|No| I[Rollback]
+    H --> J[Profit]
+    I --> D
 
-
+%%# System flow from start to production
+%%# Debug loop ensures quality

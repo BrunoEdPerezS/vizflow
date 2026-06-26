@@ -82,10 +82,18 @@
       </div>
       <div id="preview-pane">
         <div id="preview-container">
-          <div id="mermaid-preview"></div>
-          <div id="annotations-overlay"></div>
+          <div id="preview-stage">
+            <div id="mermaid-preview"></div>
+            <div id="annotations-overlay"></div>
+          </div>
         </div>
         <div id="preview-error" style="display: none;"></div>
+        <div id="zoom-controls">
+          <button id="btn-zoom-in" title="Zoom In">+</button>
+          <span id="zoom-label">100%</span>
+          <button id="btn-zoom-out" title="Zoom Out">-</button>
+          <button id="btn-zoom-fit" title="Fit to Screen">Fit</button>
+        </div>
       </div>
     </div>
   </div>

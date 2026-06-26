@@ -10,6 +10,15 @@
   var currentTheme = 'dark';
   var currentFileBasename = 'diagram';
 
+  var zoomScale = 1;
+  var zoomTx = 0;
+  var zoomTy = 0;
+  var isPanning = false;
+  var panStartX = 0;
+  var panStartY = 0;
+  var panTx = 0;
+  var panTy = 0;
+
   function setTheme(theme) {
     currentTheme = theme;
     var root = document.documentElement;
@@ -111,6 +120,62 @@
     }
   }
 
+  function applyZoom() {
+    var stage = document.getElementById('preview-stage');
+    if (!stage) return;
+    stage.style.transform = 'translate(' + zoomTx + 'px, ' + zoomTy + 'px) scale(' + zoomScale + ')';
+    document.getElementById('zoom-label').textContent = Math.round(zoomScale * 100) + '%';
+  }
+
+  function zoomStep(direction) {
+    var container = document.getElementById('preview-container');
+    if (!container) return;
+    var cx = container.clientWidth / 2;
+    var cy = container.clientHeight / 2;
+    var factor = direction > 0 ? 1.2 : 1 / 1.2;
+    var newScale = zoomScale * factor;
+    newScale = Math.max(0.1, Math.min(5, newScale));
+    var ratio = newScale / zoomScale;
+    zoomTx = cx - ratio * (cx - zoomTx);
+    zoomTy = cy - ratio * (cy - zoomTy);
+    zoomScale = newScale;
+    applyZoom();
+  }
+
+  function zoomToFit() {
+    var container = document.getElementById('preview-container');
+    var svg = document.querySelector('#mermaid-preview svg');
+    if (!container) return;
+    zoomTx = 0;
+    zoomTy = 0;
+    zoomScale = 1;
+    if (svg) {
+      try {
+        var bbox = svg.getBBox();
+        var pad = 40;
+        var sw = bbox.width || 800;
+        var sh = bbox.height || 600;
+        var cw = container.clientWidth;
+        var ch = container.clientHeight;
+        if (cw > 0 && ch > 0 && sw > 0 && sh > 0) {
+          var sx = (cw - pad) / sw;
+          var sy = (ch - pad) / sh;
+          zoomScale = Math.min(sx, sy, 1);
+          zoomTx = (cw - sw * zoomScale) / 2;
+          zoomTy = (ch - sh * zoomScale) / 2;
+        }
+      } catch (e) {}
+    }
+    applyZoom();
+  }
+
+  function resetZoom() {
+    zoomScale = 1;
+    zoomTx = 0;
+    zoomTy = 0;
+    applyZoom();
+  }
+
   function renderDiagram(mermaidCode, theme) {
     var previewDiv = document.getElementById('mermaid-preview');
     var errorDiv = document.getElementById('preview-error');
@@ -124,6 +189,7 @@
     mermaid.render(id, mermaidCode).then(function (r) {
       previewDiv.innerHTML = r.svg;
       errorDiv.style.display = 'none';
+      requestAnimationFrame(function () { zoomToFit(); });
     }).catch(function (err) {
       previewDiv.innerHTML = '';
       errorDiv.style.display = 'block';
@@ -254,8 +320,60 @@
     });
   }
 
+  function setupZoomPan() {
+    var pane = document.getElementById('preview-pane');
+    var stage = document.getElementById('preview-stage');
+
+    pane.addEventListener('wheel', function (e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      var rect = pane.getBoundingClientRect();
+      var mx = e.clientX - rect.left;
+      var my = e.clientY - rect.top;
+      var factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      var newScale = zoomScale * factor;
+      newScale = Math.max(0.1, Math.min(5, newScale));
+      if (newScale === zoomScale) return;
+      var ratio = newScale / zoomScale;
+      zoomTx = mx - ratio * (mx - zoomTx);
+      zoomTy = my - ratio * (my - zoomTy);
+      zoomScale = newScale;
+      applyZoom();
+    }, { passive: false });
+
+    stage.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      isPanning = true;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panTx = zoomTx;
+      panTy = zoomTy;
+      stage.classList.add('panning');
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function (e) {
+      if (!isPanning) return;
+      zoomTx = panTx + (e.clientX - panStartX);
+      zoomTy = panTy + (e.clientY - panStartY);
+      applyZoom();
+    });
+
+    window.addEventListener('mouseup', function () {
+      if (!isPanning) return;
+      isPanning = false;
+      var stage = document.getElementById('preview-stage');
+      if (stage) stage.classList.remove('panning');
+    });
+
+    stage.addEventListener('dblclick', function () {
+      resetZoom();
+    });
+  }
+
   function start() {
     init();
+    setupZoomPan();
     document.getElementById('btn-theme').addEventListener('click', function () {
       var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
       setTheme(newTheme);
@@ -267,6 +385,9 @@
     });
     document.getElementById('btn-export-svg').addEventListener('click', function () { exportSvg(currentFileBasename); });
     document.getElementById('btn-export-png').addEventListener('click', function () { exportPng(currentFileBasename); });
+    document.getElementById('btn-zoom-in').addEventListener('click', function () { zoomStep(1); });
+    document.getElementById('btn-zoom-out').addEventListener('click', function () { zoomStep(-1); });
+    document.getElementById('btn-zoom-fit').addEventListener('click', function () { zoomToFit(); });
   }
 
   if (document.readyState === 'loading') {
