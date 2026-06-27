@@ -1,4 +1,4 @@
-# Mermaid Live Editor
+# Vizflow
 
 ## 1. Introducción
 
@@ -316,52 +316,128 @@ Vizflow/
 
 ---
 
-## 3. Conclusión
+## 3. Desarrollo
 
 ### 3.1 Setup
 
-```powershell
-# Requisitos: Node.js ≥ 18, npm ≥ 9
+**Requisitos:** Node.js >= 18, npm >= 9
+
+```bash
+git clone <repo-url>
 cd Vizflow
 npm install
 ```
 
-### 3.2 Uso
+### 3.2 Ejecutar en desarrollo
 
-```powershell
+```bash
 # Abrir archivo existente
 npm start test-diagram.mmd
 
-# Crear archivo nuevo (template automático)
+# Crear archivo nuevo (template automatico)
 npm start nuevo_diagram.mmd
+
+# O con npm link (comando vizflow global en modo dev):
+npm link
+vizflow test-diagram.mmd
 ```
 
-### 3.3 Controles
+---
 
-| Acción | Atajo / UI |
-|---|---|
-| Escribir Mermaid | Monaco Editor (izquierda) |
-| Ver diagrama | Preview (derecha) |
-| Guardar | Automático (debounce 500ms) |
-| Zoom in/out | Ctrl+Wheel o botones `+` `-` |
-| Pan | Click + arrastrar en preview |
-| Fit to Screen | Botón `Fit` o doble-click en preview |
-| Mover sticky note | Click + arrastrar sobre la nota |
-| Toggle theme | Botón ☀ en toolbar |
-| Export SVG/PNG | Botones `SVG` `PNG` en toolbar |
+## 4. Instalacion
 
-### 3.4 Distribución
+### 4.1 Build
 
-```powershell
+```bash
 npm run dist
 ```
 
-Genera:
-- **Windows**: `.exe` (NSIS installer + portable)
-- **macOS**: `.dmg`
-- **Linux**: `.AppImage` + `.deb`
+Genera en `dist/`:
 
-### 3.5 Roadmap (v2)
+| Plataforma | Archivo |
+|------------|---------|
+| Windows | `Vizflow Setup 1.0.0.exe` (NSIS installer) + `Vizflow 1.0.0.exe` (portable) |
+| Linux | `vizflow_1.0.0_amd64.deb` + `Vizflow-1.0.0.AppImage` |
+| macOS | `Vizflow-1.0.0.dmg` |
+
+### 4.2 Windows
+
+```powershell
+# 1. Ejecutar el instalador
+.\dist\Vizflow Setup 1.0.0.exe
+
+# 2. Seguir: Next → Next → Install → Finish
+#    El instalador agrega automaticamente Vizflow al PATH del usuario
+
+# 3. Cerrar y reabrir PowerShell (o abrir una nueva pestaña)
+
+# 4. Probar desde cualquier carpeta
+vizflow mi-diagrama.mmd
+```
+
+**Desinstalar:** Desde `Configuracion > Aplicaciones > Vizflow`.  
+La entrada en PATH queda (es inofensiva, apunta a un directorio que ya no existe).
+
+### 4.3 Linux
+
+**Vía .deb (recomendado):**
+```bash
+# Instalar
+sudo dpkg -i dist/vizflow_1.0.0_amd64.deb
+
+# Listo, desde cualquier carpeta
+vizflow mi-diagrama.mmd
+```
+
+**Vía AppImage (portable):**
+```bash
+chmod +x dist/Vizflow-1.0.0.AppImage
+sudo mv dist/Vizflow-1.0.0.AppImage /usr/local/bin/vizflow
+
+vizflow mi-diagrama.mmd
+```
+
+**Desinstalar:**
+```bash
+# .deb
+sudo dpkg -r vizflow
+
+# AppImage
+sudo rm /usr/local/bin/vizflow
+```
+
+### 4.4 macOS
+
+```bash
+# 1. Arrastrar Vizflow.app a /Applications/
+open dist/Vizflow-1.0.0.dmg
+
+# 2. Crear symlink para usar desde terminal
+sudo ln -s /Applications/Vizflow.app/Contents/MacOS/Vizflow /usr/local/bin/vizflow
+
+# 3. Probar
+vizflow mi-diagrama.mmd
+```
+
+---
+
+## 5. Controles
+
+| Accion | Atajo / UI |
+|---|---|
+| Escribir Mermaid | Monaco Editor (izquierda) |
+| Ver diagrama | Preview (derecha) |
+| Guardar | Automatico (debounce 500ms) |
+| Zoom in/out | Ctrl+Wheel o botones `+` `-` |
+| Pan | Click + arrastrar en preview |
+| Fit to Screen | Boton `Fit` o doble-click en preview |
+| Mover sticky note | Click + arrastrar sobre la nota |
+| Toggle theme | Boton en toolbar |
+| Export SVG/PNG | Botones `SVG` `PNG` en toolbar |
+
+---
+
+## 6. Roadmap (v2)
 
 - `%%@` anotaciones por nodo (tooltips ligados a elementos del diagrama)
 - `contextBridge` + `preload.js` (aislar renderer del main process)

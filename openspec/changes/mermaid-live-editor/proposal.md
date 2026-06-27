@@ -4,7 +4,7 @@ El usuario necesita visualizar diagramas, ideas y planes discutidos con un LLM d
 
 ## What Changes
 
-- Nueva app nativa de escritorio (`mermaid-live`) usando Electron + Chromium
+- Nueva app nativa de escritorio (`vizflow`) usando Electron + Chromium
 - Editor Monaco (el mismo de VSCode) con syntax highlighting para Mermaid
 - Mermaid.js bundleado offline (dependencia npm, sin CDN)
 - File watching nativo (`fs.watch`) que permite al LLM editar el archivo y ver cambios reflejados instantáneamente
@@ -12,7 +12,7 @@ El usuario necesita visualizar diagramas, ideas y planes discutidos con un LLM d
 - Soporte de anotaciones en el diagrama mediante sintaxis `%%#` (notas generales) y `%%@` (anotaciones por nodo, v2)
 - Export a SVG y PNG del diagrama renderizado
 - Tema dark/light toggle
-- Interfaz CLI: `npx mermaid-live archivo.mmd`
+- Interfaz CLI: `vizflow archivo.mmd`
 - Distribución cross-platform: `.exe` (Windows), `.dmg` (macOS), `.AppImage`/`.deb` (Linux)
 
 ## Capabilities
@@ -31,6 +31,6 @@ El usuario necesita visualizar diagramas, ideas y planes discutidos con un LLM d
 
 - **Dependencias nuevas (npm)**: `mermaid`, `monaco-editor`, `js-yaml`
 - **Dependencias de desarrollo (npm)**: `electron`, `electron-builder`
-- **Nuevo módulo**: `mermaid-live/` en la raíz del proyecto (Electron app)
+- **Nuevo módulo**: `vizflow/` en la raíz del proyecto (Electron app)
 - **Sin impacto en código existente**: proyecto greenfield dentro de Vizflow
 - **Build artifacts**: generados por `electron-builder` para Windows, macOS, Linux

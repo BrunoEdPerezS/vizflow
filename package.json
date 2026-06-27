@@ -1,22 +1,29 @@
 {
-  "name": "mermaid-live",
+  "name": "vizflow",
   "version": "1.0.0",
   "description": "Live Mermaid diagram editor with LLM file-sync bridge",
   "main": "src/main/main.js",
   "bin": {
-    "mermaid-live": "./src/main/main.js"
+    "vizflow": "./bin/cli.js"
   },
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder"
   },
   "build": {
-    "appId": "ai.vizflow.mermaid-live",
-    "productName": "Mermaid Live",
+    "appId": "ai.vizflow.vizflow",
+    "productName": "Vizflow",
     "files": [
       "src/**/*",
+      "bin/**/*",
+      "build/**/*",
       "node_modules/**/*"
     ],
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "include": "build/installer.nsh"
+    },
     "win": {
       "target": [
         "nsis",

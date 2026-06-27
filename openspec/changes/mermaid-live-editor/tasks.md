@@ -1,6 +1,6 @@
 ## 1. Project Setup
 
-- [x] 1.1 Initialize npm project with `package.json` (name: `mermaid-live`, entry: `src/main.js`)
+- [x] 1.1 Initialize npm project with `package.json` (name: `vizflow`, entry: `src/main.js`)
 - [x] 1.2 Install dependencies: `mermaid`, `monaco-editor`, `js-yaml`
 - [x] 1.3 Install dev dependencies: `electron`, `electron-builder`
 - [x] 1.4 Create directory structure: `src/main/`, `src/renderer/`, `src/renderer/components/`, `src/shared/`
@@ -106,8 +106,8 @@
 
 - [x] 13.1 Add `"main": "src/main/main.js"` to `package.json`
 - [x] 13.2 Add `"scripts": { "start": "electron .", "dist": "electron-builder" }` to `package.json`
-- [x] 13.3 Add `"bin": { "mermaid-live": "./src/main/main.js" }` for CLI usage
-- [ ] 13.4 Test `npm start -- architecture.mmd` works with file argument
+- [x] 13.3 Add `"bin": { "vizflow": "./bin/cli.js" }` for CLI usage
+- [x] 13.4 Test `npm start -- architecture.mmd` works with file argument
 - [x] 13.5 Configure `electron-builder` in `package.json`: appId, productName, Windows/macOS/Linux targets
 
 ## 14. Build and Distribution
@@ -116,14 +116,14 @@
 - [x] 14.2 Configure `electron-builder` for macOS (DMG)
 - [x] 14.3 Configure `electron-builder` for Linux (AppImage, deb)
 - [x] 14.4 Add file association for `.mmd` extension in all platforms
-- [ ] 14.5 Test build output on at least one platform
+- [x] 14.5 Test build output on at least one platform
 
 ## 15. Integration and Polish
 
 - [x] 15.1 Wire all components together in `app.js`
-- [ ] 15.2 Verify full flow: user types → instant render → debounce save → file written
-- [ ] 15.3 Verify full flow: LLM edits file → watcher detects → IPC to renderer → editor + preview update
-- [ ] 15.4 Verify save-loop prevention: app's own saves don't re-trigger watcher → renderer cycle
-- [ ] 15.5 Clean shutdown: close watcher on window close, handle `app.on('before-quit')`
-- [ ] 15.6 Test with a complex Mermaid diagram (20+ nodes, subgraphs, styling, classDef) to verify performance
-- [ ] 15.7 Test cross-platform: verify the app launches and renders on Windows (primary target)
+- [x] 15.2 Verify full flow: user types → instant render → debounce save → file written
+- [x] 15.3 Verify full flow: LLM edits file → watcher detects → IPC to renderer → editor + preview update
+- [x] 15.4 Verify save-loop prevention: app's own saves don't re-trigger watcher → renderer cycle
+- [x] 15.5 Clean shutdown: close watcher on window close, handle `app.on('before-quit')`
+- [x] 15.6 Test with a complex Mermaid diagram (20+ nodes, subgraphs, styling, classDef) to verify performance
+- [x] 15.7 Test cross-platform: verify the app launches and renders on Windows (primary target)

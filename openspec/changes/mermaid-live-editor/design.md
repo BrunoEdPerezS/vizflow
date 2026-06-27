@@ -17,7 +17,7 @@ El proyecto Vizflow es un espacio de experimentación (greenfield). La herramien
 - Notas generales (`%%#`) visibles como sticky notes flotantes sobre el diagrama
 - Exportación del diagrama a SVG y PNG con diálogos nativos
 - Tema oscuro/claro
-- CLI: `npx mermaid-live archivo.mmd`
+- CLI: `vizflow archivo.mmd`
 
 **Non-Goals:**
 - Edición colaborativa en red (el bridge es local, archivo único)
@@ -121,8 +121,8 @@ graph TD
 **Racional:** Configuración declarativa en `package.json`:
 ```json
 "build": {
-  "appId": "ai.vizflow.mermaid-live",
-  "productName": "Mermaid Live",
+  "appId": "ai.vizflow.vizflow",
+  "productName": "Vizflow",
   "win": { "target": "nsis" },
   "mac": { "target": "dmg" },
   "linux": { "target": ["AppImage", "deb"] }

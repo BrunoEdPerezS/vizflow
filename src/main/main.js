@@ -33,7 +33,7 @@ function createWindow() {
     width: 1400,
     height: 900,
     center: true,
-    title: 'Mermaid Live',
+    title: 'Vizflow',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -73,7 +73,7 @@ app.whenReady().then(() => {
 
   if (!filePath) {
     const { dialog } = require('electron');
-    dialog.showErrorBox('Usage', 'mermaid-live <file.mmd>\n\nPlease specify a .mmd file to open.');
+    dialog.showErrorBox('Usage', 'vizflow <file.mmd>\n\nPlease specify a .mmd file to open.');
     app.quit();
     return;
   }

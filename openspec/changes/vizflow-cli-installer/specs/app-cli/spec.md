@@ -1,7 +1,7 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: CLI command to open a file
-The system SHALL be invocable from the command line using `vizflow <file>` or directly via the installed binary. The file argument SHALL be a path to a `.mmd` file. If the file does not exist, it SHALL be created with default template content.
+The system SHALL be invocable from the command line using `vizflow <file>` (via `npx vizflow`, `npm link`, or directly via the installed binary). The file argument SHALL be a path to a `.mmd` file. If the file does not exist, it SHALL be created with default template content.
 
 #### Scenario: Open existing file
 - **WHEN** user runs `vizflow architecture.mmd` and the file exists
@@ -13,14 +13,14 @@ The system SHALL be invocable from the command line using `vizflow <file>` or di
 
 #### Scenario: No file argument
 - **WHEN** user runs `vizflow` without specifying a file
-- **THEN** the application displays a native error dialog or usage message showing the expected syntax
+- **THEN** the application displays a native error dialog showing the expected usage: `vizflow <file.mmd>`
 
 #### Scenario: Open file from file manager
 - **WHEN** user double-clicks a `.mmd` file in the OS file manager and the application is set as the default handler
 - **THEN** the Electron app opens with that file loaded
 
 ### Requirement: Window title displays filename
-The system SHALL set the native window title to reflect the current file. If the file has a `title` in its YAML frontmatter, the title SHALL be used. Otherwise, the filename SHALL be displayed.
+The system SHALL set the native window title to reflect the current file. If the file has a `title` in its YAML frontmatter, the title SHALL be used. Otherwise, the filename SHALL be displayed. The suffix SHALL use `Vizflow` instead of `Mermaid Live`.
 
 #### Scenario: File with frontmatter title
 - **WHEN** the file has `title: System Architecture` in its frontmatter
