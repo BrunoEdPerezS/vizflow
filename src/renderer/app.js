@@ -145,26 +145,43 @@
   function zoomToFit() {
     var container = document.getElementById('preview-container');
     var svg = document.querySelector('#mermaid-preview svg');
-    if (!container) return;
-    zoomTx = 0;
-    zoomTy = 0;
-    zoomScale = 1;
-    if (svg) {
+    var stage = document.getElementById('preview-stage');
+    if (!container || !svg || !stage) return;
+
+    // Temporarily remove any CSS transform to measure the SVG's natural rendered size
+    var prevTransform = stage.style.transform;
+    stage.style.transform = '';
+
+    var rect = svg.getBoundingClientRect();
+    var sw = rect.width;
+    var sh = rect.height;
+
+    // Fallback to viewBox if getBoundingClientRect returns 0 (not yet laid out)
+    if (!sw || !sh) {
       try {
-        var bbox = svg.getBBox();
-        var pad = 40;
-        var sw = bbox.width || 800;
-        var sh = bbox.height || 600;
-        var cw = container.clientWidth;
-        var ch = container.clientHeight;
-        if (cw > 0 && ch > 0 && sw > 0 && sh > 0) {
-          var sx = (cw - pad) / sw;
-          var sy = (ch - pad) / sh;
-          zoomScale = Math.min(sx, sy, 1);
-          zoomTx = (cw - sw * zoomScale) / 2;
-          zoomTy = (ch - sh * zoomScale) / 2;
-        }
-      } catch (e) {}
+        var vb = svg.viewBox.baseVal;
+        sw = vb.width || 800;
+        sh = vb.height || 600;
+      } catch (e) {
+        sw = 800;
+        sh = 600;
+      }
+    }
+
+    var cw = container.clientWidth;
+    var ch = container.clientHeight;
+
+    if (cw > 0 && ch > 0 && sw > 0 && sh > 0) {
+      var pad = 40;
+      var sx = (cw - pad) / sw;
+      var sy = (ch - pad) / sh;
+      zoomScale = Math.min(Math.max(sx, sy), 1);
+      zoomTx = (cw - sw * zoomScale) / 2;
+      zoomTy = (ch - sh * zoomScale) / 2;
+    } else {
+      zoomTx = 0;
+      zoomTy = 0;
+      zoomScale = 1;
     }
     applyZoom();
   }
