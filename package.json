@@ -38,7 +38,10 @@
     "linux": {
       "target": [
         "AppImage",
-        "deb"
+        {
+          "target": "deb",
+          "afterRemove": "build/after-remove.sh"
+        }
       ],
       "icon": null
     },

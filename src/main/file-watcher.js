@@ -1,51 +1,44 @@
 const fs = require('fs');
 const path = require('path');
 
-let watcher = null;
+let watchers = {};
 let mainWindow = null;
-let filePath = null;
-let getSelfSaving = null;
-let setSelfSaving = null;
 
-function startWatcher(fp, mw, getSf, setSf) {
-  filePath = path.resolve(fp);
+function addWatcher(filePath, mw, getSelfSaving, setSelfSaving) {
+  var fp = path.resolve(filePath);
   mainWindow = mw;
-  getSelfSaving = getSf;
-  setSelfSaving = setSf;
 
-  watchFile();
-}
+  if (watchers[fp]) {
+    try { watchers[fp].close(); } catch (e) {}
+  }
 
-function watchFile() {
-  if (!filePath || !fs.existsSync(filePath)) return;
+  if (!fs.existsSync(fp)) return;
 
   try {
-    watcher = fs.watch(filePath, (eventType) => {
+    watchers[fp] = fs.watch(fp, function (eventType) {
       if (eventType === 'change') {
-        if (getSelfSaving && getSelfSaving()) {
-          return;
-        }
+        if (getSelfSaving && getSelfSaving()) return;
 
         try {
-          const content = fs.readFileSync(filePath, 'utf-8');
+          var content = fs.readFileSync(fp, 'utf-8');
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('file:external-change', content);
+            mainWindow.webContents.send('file:external-change', { filePath: fp, content: content });
           }
         } catch (err) {
           console.error('Error reading file on external change:', err.message);
         }
       } else if (eventType === 'rename') {
-        setTimeout(() => {
-          if (fs.existsSync(filePath)) {
+        setTimeout(function () {
+          if (fs.existsSync(fp)) {
             try {
-              const content = fs.readFileSync(filePath, 'utf-8');
+              var content = fs.readFileSync(fp, 'utf-8');
               if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('file:external-change', content);
+                mainWindow.webContents.send('file:external-change', { filePath: fp, content: content });
               }
             } catch (err) {
               console.error('Error reading recreated file:', err.message);
             }
-            watchFile();
+            addWatcher(fp, mainWindow, getSelfSaving, setSelfSaving);
           }
         }, 100);
       }
@@ -55,15 +48,27 @@ function watchFile() {
   }
 }
 
-function stopWatcher() {
-  if (watcher) {
+function removeWatcher(filePath) {
+  var fp = path.resolve(filePath);
+  if (watchers[fp]) {
     try {
-      watcher.close();
+      watchers[fp].close();
     } catch (err) {
       console.error('Error closing watcher:', err.message);
     }
-    watcher = null;
+    delete watchers[fp];
   }
 }
 
-module.exports = { startWatcher, stopWatcher };
+function stopAllWatchers() {
+  Object.keys(watchers).forEach(function (fp) {
+    try {
+      watchers[fp].close();
+    } catch (err) {
+      console.error('Error closing watcher:', err.message);
+    }
+  });
+  watchers = {};
+}
+
+module.exports = { addWatcher, removeWatcher, stopAllWatchers };

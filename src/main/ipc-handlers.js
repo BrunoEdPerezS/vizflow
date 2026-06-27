@@ -2,29 +2,29 @@ const { ipcMain, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
-let getFilePath = null;
+let getActiveFilePath = null;
+let getOpenFilePaths = null;
 let getSelfSaving = null;
 let setSelfSaving = null;
 
-function registerIpcHandlers(mainWindow, getFp, getSf, setSf) {
-  getFilePath = getFp;
+function registerIpcHandlers(mainWindow, getActiveFp, getOpenFps, getSf, setSf) {
+  getActiveFilePath = getActiveFp;
+  getOpenFilePaths = getOpenFps;
   getSelfSaving = getSf;
   setSelfSaving = setSf;
 
-  ipcMain.handle('file:read', async () => {
-    const fp = getFilePath();
-    if (!fp || !fs.existsSync(fp)) {
-      return '';
-    }
+  ipcMain.handle('file:read', async (_event, data) => {
+    var fp = (data && data.filePath) || getActiveFilePath();
+    if (!fp || !fs.existsSync(fp)) return '';
     return fs.readFileSync(fp, 'utf-8');
   });
 
-  ipcMain.handle('file:save', async (_event, content) => {
-    const fp = getFilePath();
+  ipcMain.handle('file:save', async (_event, payload) => {
+    var fp = (payload && payload.filePath) || getActiveFilePath();
     if (!fp) return { success: false, error: 'No file path' };
     try {
-      setSelfSaving(true);
-      fs.writeFileSync(fp, content, 'utf-8');
+      setSelfSaving(fp, true);
+      fs.writeFileSync(fp, payload.content, 'utf-8');
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -32,12 +32,12 @@ function registerIpcHandlers(mainWindow, getFp, getSf, setSf) {
   });
 
   ipcMain.handle('export:svg', async (_event, { svgContent, defaultName }) => {
-    const fp = getFilePath();
-    const basename = fp ? path.basename(fp, '.mmd') : 'diagram';
-    const defaultPath = defaultName || `${basename}.svg`;
+    var fp = getActiveFilePath();
+    var basename = fp ? path.basename(fp, '.mmd') : 'diagram';
+    var defaultPath = defaultName || basename + '.svg';
 
-    const result = await dialog.showSaveDialog(mainWindow, {
-      defaultPath,
+    var result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: defaultPath,
       filters: [{ name: 'SVG Files', extensions: ['svg'] }]
     });
 
@@ -54,12 +54,12 @@ function registerIpcHandlers(mainWindow, getFp, getSf, setSf) {
   });
 
   ipcMain.handle('export:png', async (_event, { dataUrl, defaultName }) => {
-    const fp = getFilePath();
-    const basename = fp ? path.basename(fp, '.mmd') : 'diagram';
-    const defaultPath = defaultName || `${basename}.png`;
+    var fp = getActiveFilePath();
+    var basename = fp ? path.basename(fp, '.mmd') : 'diagram';
+    var defaultPath = defaultName || basename + '.png';
 
-    const result = await dialog.showSaveDialog(mainWindow, {
-      defaultPath,
+    var result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: defaultPath,
       filters: [{ name: 'PNG Files', extensions: ['png'] }]
     });
 
@@ -68,8 +68,8 @@ function registerIpcHandlers(mainWindow, getFp, getSf, setSf) {
     }
 
     try {
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
+      var base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+      var buffer = Buffer.from(base64Data, 'base64');
       fs.writeFileSync(result.filePath, buffer);
       return { success: true, path: result.filePath };
     } catch (err) {
@@ -77,8 +77,8 @@ function registerIpcHandlers(mainWindow, getFp, getSf, setSf) {
     }
   });
 
-  ipcMain.handle('get:filepath', async () => {
-    return getFilePath();
+  ipcMain.handle('get:filepaths', async () => {
+    return { filePaths: getOpenFilePaths(), activeFilePath: getActiveFilePath() };
   });
 }
 

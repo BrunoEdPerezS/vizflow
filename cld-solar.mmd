@@ -1,0 +1,64 @@
+---
+title: CLD — Negocio de Paneles Solares
+description: Diagrama de dinámica de sistemas con bucles de realimentación reforzadores (R) y balanceadores (B) para un negocio de venta de paneles solares.
+theme: dark
+---
+
+flowchart LR
+    %% ═══════════════════════════════════════════
+    %% FACTORES EXÓGENOS
+    %% ═══════════════════════════════════════════
+    PE["⚡ Precio de\nelectricidad"]
+    SUB["🏛️ Subsidios\ngubernamentales"]
+    CM["📦 Costo de\nmateriales"]
+
+    %% ═══════════════════════════════════════════
+    %% VARIABLES ENDÓGENAS DEL SISTEMA
+    %% ═══════════════════════════════════════════
+    DEM["🟢 Demanda de\npaneles solares"]
+    ING["💰 Ingresos\npor ventas"]
+    MKT["📢 Inversión en\nmarketing"]
+    COMP["🏢 Competencia en\nel mercado"]
+    MARG["📊 Margen de\nganancia"]
+    CAP["🔧 Capacidad de\ninstalación"]
+    SAT["⭐ Clientes\nsatisfechos"]
+    REF["💬 Referencias\nboca a boca"]
+
+    %% ═══════════════════════════════════════════
+    %% RELACIONES CAUSALES
+    %% ═══════════════════════════════════════════
+
+    %% --- Influencias externas sobre la demanda ---
+    PE   -->|"Incrementa"| DEM
+    SUB  -->|"Incrementa"| DEM
+
+    %% --- Bucle R1: Virtuoso de satisfacción ---
+    DEM  -->|"Incrementa"| CAP
+    CAP  -->|"Incrementa"| SAT
+    SAT  -->|"Incrementa"| REF
+    REF  -->|"Incrementa"| DEM
+
+    %% --- Bucle R2: Inversión en crecimiento ---
+    DEM  -->|"Incrementa"| ING
+    ING  -->|"Incrementa"| MKT
+    MKT  -->|"Incrementa"| DEM
+
+    %% --- Bucle B1: Competencia que erosiona margen ---
+    DEM  -->|"Incrementa"| COMP
+    COMP -->|"Disminuye"| MARG
+    MARG -->|"Incrementa"| ING
+
+    %% --- Costo de materiales afecta margen ---
+    CM   -->|"Disminuye"| MARG
+
+    %% ═══════════════════════════════════════════
+    %% ESTILOS
+    %% ═══════════════════════════════════════════
+    classDef exogenous fill:#2d3a4a,stroke:#5a7a9a,color:#b0c4de
+    classDef core      fill:#1a3a2a,stroke:#4a8a5a,color:#c0e0c0
+    classDef profit    fill:#3a2a1a,stroke:#8a6a4a,color:#e0d0c0
+
+    class PE,SUB,CM exogenous
+    class DEM,CAP,SAT,REF,MKT,COMP core
+    class ING,MARG profit
+

@@ -1,30 +1,43 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { registerIpcHandlers } = require('./ipc-handlers');
-const { startWatcher, stopWatcher } = require('./file-watcher');
+const { addWatcher, removeWatcher, stopAllWatchers } = require('./file-watcher');
 
 let mainWindow = null;
-let filePath = null;
-let selfSaving = false;
-let selfSavingTimer = null;
+let openFiles = {};
+let activeFilePath = null;
 
-function getFilePath() {
-  return filePath;
+function getActiveFilePath() {
+  return activeFilePath;
 }
 
-function getSelfSaving() {
-  return selfSaving;
+function getOpenFilePaths() {
+  return Object.keys(openFiles);
 }
 
-function setSelfSaving(val) {
-  selfSaving = val;
-  if (selfSavingTimer) { clearTimeout(selfSavingTimer); selfSavingTimer = null; }
+function getSelfSaving(fp) {
+  var entry = openFiles[fp];
+  return entry ? entry.selfSaving : false;
+}
+
+function setSelfSaving(fp, val) {
+  var entry = openFiles[fp];
+  if (!entry) return;
+  entry.selfSaving = val;
+  if (entry.selfSavingTimer) { clearTimeout(entry.selfSavingTimer); entry.selfSavingTimer = null; }
   if (val) {
-    selfSavingTimer = setTimeout(function () {
-      selfSaving = false;
-      selfSavingTimer = null;
+    entry.selfSavingTimer = setTimeout(function () {
+      entry.selfSaving = false;
+      entry.selfSavingTimer = null;
     }, 500);
+  }
+}
+
+function updateWindowTitle() {
+  if (mainWindow) {
+    var basename = activeFilePath ? path.basename(activeFilePath) : 'untitled.mmd';
+    mainWindow.setTitle('Vizflow - ' + basename);
   }
 }
 
@@ -52,41 +65,137 @@ function getDefaultTemplate() {
   return fs.readFileSync(templatePath, 'utf-8');
 }
 
-app.whenReady().then(() => {
-  const args = process.argv.slice(1);
-  let mmdArg = null;
+async function openFileDialog() {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Abrir diagrama',
+    filters: [{ name: 'Mermaid Diagrams', extensions: ['mmd'] }],
+    properties: ['openFile']
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+}
 
-  for (const arg of args) {
-    if (arg.endsWith('.mmd')) {
-      mmdArg = arg;
-      break;
-    }
+function addFileToOpen(newPath) {
+  const resolved = path.resolve(newPath);
+
+  if (!fs.existsSync(resolved)) {
+    fs.writeFileSync(resolved, getDefaultTemplate(), 'utf-8');
   }
 
-  if (!mmdArg && args.length > 1 && !args[args.length - 1].startsWith('--') && !args[args.length - 1].startsWith('-')) {
-    mmdArg = args[args.length - 1];
-  }
-
-  if (mmdArg) {
-    filePath = path.resolve(mmdArg);
-  }
-
-  if (!filePath) {
-    const { dialog } = require('electron');
-    dialog.showErrorBox('Usage', 'vizflow <file.mmd>\n\nPlease specify a .mmd file to open.');
-    app.quit();
+  if (openFiles[resolved]) {
+    activeFilePath = resolved;
+    updateWindowTitle();
+    mainWindow.webContents.send('tab:activate', { filePath: resolved });
     return;
   }
 
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, getDefaultTemplate(), 'utf-8');
+  openFiles[resolved] = { selfSaving: false, selfSavingTimer: null };
+  activeFilePath = resolved;
+  updateWindowTitle();
+
+  addWatcher(resolved, mainWindow, function () { return getSelfSaving(resolved); }, function (v) { setSelfSaving(resolved, v); });
+
+  const content = fs.readFileSync(resolved, 'utf-8');
+  mainWindow.webContents.send('tab:open', { filePath: resolved, content });
+}
+
+function closeFile(targetPath) {
+  if (!openFiles[targetPath]) return;
+
+  removeWatcher(targetPath);
+
+  var timer = openFiles[targetPath].selfSavingTimer;
+  if (timer) clearTimeout(timer);
+  delete openFiles[targetPath];
+
+  if (targetPath === activeFilePath) {
+    var remaining = Object.keys(openFiles);
+    if (remaining.length > 0) {
+      activeFilePath = remaining[0];
+      updateWindowTitle();
+      mainWindow.webContents.send('tab:removed', { removedPath: targetPath, newActivePath: activeFilePath });
+    } else {
+      activeFilePath = null;
+      updateWindowTitle();
+    }
+  } else {
+    mainWindow.webContents.send('tab:removed', { removedPath: targetPath, newActivePath: activeFilePath });
+  }
+}
+
+function buildMenu() {
+  const template = [
+    {
+      label: 'Archivo',
+      submenu: [
+        {
+          label: 'Abrir...',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const newPath = await openFileDialog();
+            if (newPath) addFileToOpen(newPath);
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Cerrar pestaña',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            if (activeFilePath) closeFile(activeFilePath);
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Salir',
+          accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
+          role: 'quit'
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
+app.whenReady().then(() => {
+  const args = process.argv.slice(1);
+  const mmdFiles = [];
+
+  for (const arg of args) {
+    if (arg.endsWith('.mmd')) {
+      mmdFiles.push(path.resolve(arg));
+    }
   }
 
+  if (mmdFiles.length === 0 && args.length > 1 && !args[args.length - 1].startsWith('--') && !args[args.length - 1].startsWith('-')) {
+    mmdFiles.push(path.resolve(args[args.length - 1]));
+  }
+
+  if (mmdFiles.length === 0) {
+    mmdFiles.push(path.join(app.getPath('temp'), 'untitled.mmd'));
+  }
+
+  mmdFiles.forEach(function (fp) {
+    if (!fs.existsSync(fp)) {
+      fs.writeFileSync(fp, getDefaultTemplate(), 'utf-8');
+    }
+    openFiles[fp] = { selfSaving: false, selfSavingTimer: null };
+    addWatcher(fp, mainWindow, function () { return getSelfSaving(fp); }, function (v) { setSelfSaving(fp, v); });
+  });
+
+  activeFilePath = mmdFiles[0];
+
   createWindow();
-  registerIpcHandlers(mainWindow, () => filePath, () => selfSaving, (v) => { selfSaving = v; });
+  buildMenu();
+  updateWindowTitle();
+  registerIpcHandlers(mainWindow, getActiveFilePath, getOpenFilePaths, getSelfSaving, setSelfSaving);
 
   mainWindow.webContents.on('did-finish-load', () => {
-    startWatcher(filePath, mainWindow, () => selfSaving, (v) => { selfSaving = v; });
+    var payloads = mmdFiles.map(function (fp) {
+      return { filePath: fp, content: fs.readFileSync(fp, 'utf-8') };
+    });
+    mainWindow.webContents.send('tabs:init', { tabs: payloads, activeFilePath: activeFilePath });
   });
 
   app.on('activate', () => {
@@ -97,12 +206,12 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  stopWatcher();
+  stopAllWatchers();
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
 app.on('before-quit', () => {
-  stopWatcher();
+  stopAllWatchers();
 });

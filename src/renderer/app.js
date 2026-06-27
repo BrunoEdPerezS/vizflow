@@ -5,10 +5,99 @@
 
   var editor = null;
   var monaco = null;
-  var saveTimeout = null;
-  var isExternalUpdate = false;
   var currentTheme = 'dark';
-  var currentFileBasename = 'diagram';
+
+  function Tab(filePath, content) {
+    this.id = filePath;
+    this.filePath = filePath;
+    this._content = content;
+    this.model = null;
+    this.viewState = null;
+    this.zoomScale = 1;
+    this.fitScale = 1;
+    this.zoomTx = 0;
+    this.zoomTy = 0;
+    this.saveTimeout = null;
+    this.isExternalUpdate = false;
+    this.parsed = parseMmd(content);
+  }
+
+  var TabManager = {
+    tabs: {},
+    _activeId: null,
+
+    getActiveTab: function () {
+      return this._activeId ? this.tabs[this._activeId] : null;
+    },
+
+    getActiveId: function () {
+      return this._activeId;
+    },
+
+    getTabIds: function () {
+      return Object.keys(this.tabs);
+    },
+
+    addTab: function (filePath, content) {
+      if (this.tabs[filePath]) return this.tabs[filePath];
+      var tab = new Tab(filePath, content);
+      if (monaco) {
+        tab.model = monaco.editor.createModel(content, 'mermaid');
+        tab.model.updateOptions({ tabSize: 2 });
+      }
+      this.tabs[filePath] = tab;
+      return tab;
+    },
+
+    removeTab: function (filePath) {
+      var tab = this.tabs[filePath];
+      if (!tab) return;
+      if (tab.saveTimeout) { clearTimeout(tab.saveTimeout); }
+      if (tab.model) { tab.model.dispose(); }
+      delete this.tabs[filePath];
+    },
+
+    saveTabState: function () {
+      var tab = this.getActiveTab();
+      if (!tab) return;
+      if (editor) {
+        try { tab.viewState = editor.saveViewState(); } catch (e) {}
+      }
+      tab.zoomScale = zoomScale;
+      tab.fitScale = fitScale;
+      tab.zoomTx = zoomTx;
+      tab.zoomTy = zoomTy;
+    },
+
+    switchTab: function (filePath) {
+      var tab = this.tabs[filePath];
+      if (!tab || filePath === this._activeId) return;
+      this.saveTabState();
+      this._activeId = filePath;
+      this.restoreTabState(tab);
+    },
+
+    restoreTabState: function (tab) {
+      if (!editor || !tab) return;
+      editor.setModel(tab.model);
+      if (tab.viewState) { try { editor.restoreViewState(tab.viewState); } catch (e) {} }
+      zoomScale = tab.zoomScale;
+      fitScale = tab.fitScale;
+      zoomTx = tab.zoomTx;
+      zoomTy = tab.zoomTy;
+      applyZoom();
+      currentFileBasename = tab.filePath.replace(/\\/g, '/').split('/').pop().replace('.mmd', '');
+      document.getElementById('file-name').textContent = tab.parsed.frontmatter && tab.parsed.frontmatter.title ? tab.parsed.frontmatter.title : currentFileBasename;
+      renderDiagram(tab.parsed.mermaidCode, currentTheme);
+      renderAnnotations(tab.parsed.annotations);
+      syncAnnotationFontSize();
+      renderTabBar();
+      if (tab.parsed.frontmatter && tab.parsed.frontmatter.theme && tab.parsed.frontmatter.theme !== currentTheme) {
+        setTheme(tab.parsed.frontmatter.theme);
+        updateEditorTheme(currentTheme);
+      }
+    }
+  };
 
   var zoomScale = 1;
   var fitScale = 1;
@@ -19,6 +108,13 @@
   var panStartY = 0;
   var panTx = 0;
   var panTy = 0;
+  var currentFileBasename = 'diagram';
+
+  function updateActiveTabParsed() {
+    var tab = TabManager.getActiveTab();
+    if (!tab) return;
+    tab.parsed = parseMmd(tab.model ? tab.model.getValue() : '');
+  }
 
   function setTheme(theme) {
     currentTheme = theme;
@@ -77,7 +173,7 @@
         registerMermaidLanguage(monaco);
         var editorTheme = theme === 'dark' ? 'vs-dark' : 'vs';
         editor = monaco.editor.create(document.getElementById('editor-container'), {
-          value: initialContent,
+          value: '',
           language: 'mermaid',
           theme: editorTheme,
           fontSize: 14,
@@ -92,11 +188,14 @@
           bracketPairColorization: { enabled: true }
         });
         editor.onDidChangeModelContent(function () {
-          if (isExternalUpdate) { isExternalUpdate = false; return; }
+          var tab = TabManager.getActiveTab();
+          if (!tab) return;
+          if (tab.isExternalUpdate) { tab.isExternalUpdate = false; return; }
+          updateActiveTabParsed();
           if (onChangeCallback) { onChangeCallback(); }
-          if (saveTimeout) { clearTimeout(saveTimeout); }
-          saveTimeout = setTimeout(function () {
-            ipcRenderer.invoke('file:save', editor.getValue());
+          if (tab.saveTimeout) { clearTimeout(tab.saveTimeout); }
+          tab.saveTimeout = setTimeout(function () {
+            ipcRenderer.invoke('file:save', { filePath: tab.filePath, content: tab.model.getValue() });
           }, 500);
         });
         window.addEventListener('resize', function () { if (editor) editor.layout(); });
@@ -105,13 +204,16 @@
     });
   }
 
-  function getEditorContent() { return editor ? editor.getValue() : ''; }
+  function getEditorContent() { return editor ? editor.getModel().getValue() : ''; }
 
   function setEditorContent(content) {
     if (!editor) return;
-    isExternalUpdate = true;
+    var model = editor.getModel();
+    if (!model) return;
+    var tab = TabManager.getActiveTab();
+    if (tab) { tab.isExternalUpdate = true; }
     var pos = editor.getPosition();
-    editor.setValue(content);
+    model.setValue(content);
     if (pos) { try { editor.setPosition(pos); } catch (e) {} }
   }
 
@@ -246,7 +348,9 @@
 
   function updateAnnotationLineInEditor(annotationIndex, x, y) {
     if (!editor) return;
-    var content = getEditorContent();
+    var tab = TabManager.getActiveTab();
+    if (!tab) return;
+    var content = tab.model.getValue();
     var lines = content.split('\n');
     var count = 0;
     for (var i = 0; i < lines.length; i++) {
@@ -261,13 +365,15 @@
       }
       count++;
     }
-    setEditorContent(lines.join('\n'));
-    if (saveTimeout) { clearTimeout(saveTimeout); }
-    saveTimeout = setTimeout(function () {
-      ipcRenderer.invoke('file:save', editor.getValue());
+    var newContent = lines.join('\n');
+    tab.isExternalUpdate = true;
+    tab.model.setValue(newContent);
+    updateActiveTabParsed();
+    if (tab.saveTimeout) { clearTimeout(tab.saveTimeout); }
+    tab.saveTimeout = setTimeout(function () {
+      ipcRenderer.invoke('file:save', { filePath: tab.filePath, content: newContent });
     }, 500);
-    var parsed = parseMmd(lines.join('\n'));
-    renderAnnotations(parsed.annotations);
+    renderAnnotations(tab.parsed.annotations);
     syncAnnotationFontSize();
   }
 
@@ -395,13 +501,19 @@
   }
 
   async function handleContentChange() {
-    var content = getEditorContent();
+    var tab = TabManager.getActiveTab();
+    if (!tab) return;
+    var content = tab.model.getValue();
     var parsed = parseMmd(content);
+    tab.parsed = parsed;
     if (parsed.frontmatter && parsed.frontmatter.title) {
       document.getElementById('file-name').textContent = parsed.frontmatter.title;
+    } else {
+      document.getElementById('file-name').textContent = tab.filePath.replace(/\\/g, '/').split('/').pop().replace('.mmd', '');
     }
     renderDiagram(parsed.mermaidCode, currentTheme);
     renderAnnotations(parsed.annotations);
+    renderTabBar();
   }
 
   function checkThemeFromFm(fm) {
@@ -411,29 +523,130 @@
     }
   }
 
-  async function init() {
-    var fp = await ipcRenderer.invoke('get:filepath');
-    if (fp) {
-      var parts = fp.replace(/\\/g, '/').split('/');
-      currentFileBasename = parts[parts.length - 1].replace('.mmd', '');
-      document.getElementById('file-name').textContent = currentFileBasename;
-    }
-    var content = await ipcRenderer.invoke('file:read');
-    var parsed = parseMmd(content);
-    setTheme((parsed.frontmatter && parsed.frontmatter.theme) || 'dark');
-    if (parsed.frontmatter && parsed.frontmatter.title) {
-      document.getElementById('file-name').textContent = parsed.frontmatter.title;
-    }
-    await initEditor(content, currentTheme, function () { handleContentChange(); });
-    renderDiagram(parsed.mermaidCode, currentTheme, zoomToFit);
-    renderAnnotations(parsed.annotations);
-    ipcRenderer.on('file:external-change', function (_e, newContent) {
-      setEditorContent(newContent);
-      var p = parseMmd(newContent);
-      checkThemeFromFm(p.frontmatter);
-      renderDiagram(p.mermaidCode, currentTheme);
-      renderAnnotations(p.annotations);
+  function renderTabBar() {
+    var bar = document.getElementById('tab-bar');
+    if (!bar) return;
+    bar.innerHTML = '';
+    var ids = TabManager.getTabIds();
+    var activeId = TabManager.getActiveId();
+    ids.forEach(function (id) {
+      var tab = TabManager.tabs[id];
+      var el = document.createElement('div');
+      el.className = 'tab' + (id === activeId ? ' active' : '');
+      el.setAttribute('data-tab-id', id);
+      el.title = id;
+
+      var label = document.createElement('span');
+      label.className = 'tab-label';
+      label.textContent = tab.filePath.replace(/\\/g, '/').split('/').pop();
+      el.appendChild(label);
+
+      var closeBtn = document.createElement('button');
+      closeBtn.className = 'tab-close';
+      closeBtn.innerHTML = '&times;';
+      closeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        ipcRenderer.invoke('file:save', { filePath: id, content: tab.model.getValue() });
+        TabManager.removeTab(id);
+        var remaining = TabManager.getTabIds();
+        if (remaining.length > 0) {
+          var nextId = remaining[0];
+          TabManager.switchTab(nextId);
+        }
+        renderTabBar();
+      });
+      el.appendChild(closeBtn);
+
+      el.addEventListener('click', function () {
+        TabManager.switchTab(id);
+      });
+
+      bar.appendChild(el);
     });
+  }
+
+  function onTabsInit(_e, payload) {
+    var tabs = payload.tabs;
+    var activePath = payload.activeFilePath;
+
+    tabs.forEach(function (t) {
+      var tab = TabManager.addTab(t.filePath, t.content);
+      if (t.filePath === activePath) {
+        TabManager._activeId = t.filePath;
+      }
+    });
+
+    if (!editor || !monaco) {
+      var initCheck = setInterval(function () {
+        if (editor && monaco) {
+          clearInterval(initCheck);
+          finishTabsInit();
+        }
+      }, 50);
+      return;
+    }
+    finishTabsInit();
+
+    function finishTabsInit() {
+      var ids = TabManager.getTabIds();
+      ids.forEach(function (id) {
+        var t = TabManager.tabs[id];
+        if (!t.model) {
+          t.model = monaco.editor.createModel(t._content, 'mermaid');
+          t.model.updateOptions({ tabSize: 2 });
+        }
+      });
+      var activeTab = TabManager.getActiveTab();
+      if (!activeTab) return;
+
+      currentFileBasename = activeTab.filePath.replace(/\\/g, '/').split('/').pop().replace('.mmd', '');
+      document.getElementById('file-name').textContent = activeTab.parsed.frontmatter && activeTab.parsed.frontmatter.title ? activeTab.parsed.frontmatter.title : currentFileBasename;
+      setTheme((activeTab.parsed.frontmatter && activeTab.parsed.frontmatter.theme) || 'dark');
+
+      editor.setModel(activeTab.model);
+      renderDiagram(activeTab.parsed.mermaidCode, currentTheme, zoomToFit);
+      renderAnnotations(activeTab.parsed.annotations);
+      syncAnnotationFontSize();
+      renderTabBar();
+    }
+  }
+
+  function onTabOpen(_e, payload) {
+    if (TabManager.tabs[payload.filePath]) {
+      TabManager.switchTab(payload.filePath);
+      return;
+    }
+    var tab = TabManager.addTab(payload.filePath, payload.content);
+    TabManager.switchTab(payload.filePath);
+    renderTabBar();
+  }
+
+  function onTabActivate(_e, payload) {
+    TabManager.switchTab(payload.filePath);
+  }
+
+  function onTabRemoved(_e, payload) {
+    if (payload.newActivePath) {
+      TabManager.switchTab(payload.newActivePath);
+    }
+    renderTabBar();
+  }
+
+  function onFileExternalChange(_e, payload) {
+    var filePath = payload.filePath;
+    var content = payload.content;
+    var tab = TabManager.tabs[filePath];
+    if (!tab) return;
+
+    tab.isExternalUpdate = true;
+    tab.model.setValue(content);
+    tab.parsed = parseMmd(content);
+
+    if (TabManager.getActiveId() === filePath) {
+      checkThemeFromFm(tab.parsed.frontmatter);
+      renderDiagram(tab.parsed.mermaidCode, currentTheme);
+      renderAnnotations(tab.parsed.annotations);
+    }
   }
 
   function setupZoomPan() {
@@ -488,16 +701,50 @@
   }
 
   function start() {
-    init();
-    setupZoomPan();
+    ipcRenderer.on('tabs:init', onTabsInit);
+    ipcRenderer.on('tab:open', onTabOpen);
+    ipcRenderer.on('tab:activate', onTabActivate);
+    ipcRenderer.on('tab:removed', onTabRemoved);
+    ipcRenderer.on('file:external-change', onFileExternalChange);
+
+    initEditor('', currentTheme, function () { handleContentChange(); }).then(function () {
+      setupZoomPan();
+    });
+
+    window.addEventListener('keydown', function (e) {
+      if (e.altKey && e.keyCode >= 49 && e.keyCode <= 57) {
+        e.preventDefault();
+        var idx = e.keyCode - 49;
+        var ids = TabManager.getTabIds();
+        if (idx < ids.length) {
+          TabManager.switchTab(ids[idx]);
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.keyCode === 87) {
+        e.preventDefault();
+        var activeId = TabManager.getActiveId();
+        if (activeId && TabManager.getTabIds().length > 1) {
+          var tab = TabManager.getActiveTab();
+          ipcRenderer.invoke('file:save', { filePath: activeId, content: tab.model.getValue() });
+          TabManager.removeTab(activeId);
+          var remaining = TabManager.getTabIds();
+          if (remaining.length > 0) {
+            TabManager.switchTab(remaining[0]);
+          }
+          renderTabBar();
+        }
+      }
+    });
+
     document.getElementById('btn-theme').addEventListener('click', function () {
       var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
       setTheme(newTheme);
       updateEditorTheme(newTheme);
-      var content = getEditorContent();
-      var parsed = parseMmd(content);
-      renderDiagram(parsed.mermaidCode, newTheme);
-      renderAnnotations(parsed.annotations);
+      var tab = TabManager.getActiveTab();
+      if (!tab) return;
+      updateActiveTabParsed();
+      renderDiagram(tab.parsed.mermaidCode, newTheme);
+      renderAnnotations(tab.parsed.annotations);
     });
     document.getElementById('btn-export-svg').addEventListener('click', function () { exportSvg(currentFileBasename); });
     document.getElementById('btn-export-png').addEventListener('click', function () { exportPng(currentFileBasename); });

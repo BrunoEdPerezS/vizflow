@@ -1,0 +1,31 @@
+---
+title: Controlador PID Genérico — Máquina de Estados
+theme: dark
+---
+
+stateDiagram-v2
+    [*] --> Inicializacion
+
+    Inicializacion --> LecturaSensor: parámetros configurados<br/>(Kp, Ki, Kd, Ts)
+
+    LecturaSensor --> CalculoError: valor medido y(t)
+
+    CalculoError --> CalculoP: e(t)
+    CalculoError --> CalculoI: e(t)
+    CalculoError --> CalculoD: e(t)
+
+    CalculoP --> SumaTerminos: P = Kp·e(t)
+    CalculoI --> SumaTerminos: I = Ki·∫e(t)dt
+    CalculoD --> SumaTerminos: D = Kd·de/dt
+
+    SumaTerminos --> VerificarSaturacion: u_raw = P + I + D
+
+    VerificarSaturacion --> AntiWindup: u_raw &gt; max o &lt; min
+    VerificarSaturacion --> SalidaActuador: dentro de límites
+
+    AntiWindup --> SalidaActuador: integral recortada
+    AntiWindup --> CalculoI: realimentación<br/>anti-windup
+
+    SalidaActuador --> LecturaSensor: aplicar u(t)<br/>esperar Ts
+
+
