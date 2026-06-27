@@ -179,7 +179,7 @@
   color: var(--sticky-text);
   padding: 8px 14px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--annotation-font-size, 12px);
   font-style: italic;
   font-family: inherit;
   pointer-events: auto;

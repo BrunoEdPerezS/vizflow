@@ -11,6 +11,7 @@
   var currentFileBasename = 'diagram';
 
   var zoomScale = 1;
+  var fitScale = 1;
   var zoomTx = 0;
   var zoomTy = 0;
   var isPanning = false;
@@ -123,7 +124,8 @@
   function applyZoom() {
     var stage = document.getElementById('preview-stage');
     if (!stage) return;
-    stage.style.transform = 'translate(' + zoomTx + 'px, ' + zoomTy + 'px) scale(' + zoomScale + ')';
+    var effectiveScale = zoomScale * fitScale;
+    stage.style.transform = 'translate(' + zoomTx + 'px, ' + zoomTy + 'px) scale(' + effectiveScale + ')';
     document.getElementById('zoom-label').textContent = Math.round(zoomScale * 100) + '%';
   }
 
@@ -148,7 +150,6 @@
     var stage = document.getElementById('preview-stage');
     if (!container || !svg || !stage) return;
 
-    // Temporarily remove any CSS transform to measure the SVG's natural rendered size
     var prevTransform = stage.style.transform;
     stage.style.transform = '';
 
@@ -156,7 +157,6 @@
     var sw = rect.width;
     var sh = rect.height;
 
-    // Fallback to viewBox if getBoundingClientRect returns 0 (not yet laid out)
     if (!sw || !sh) {
       try {
         var vb = svg.viewBox.baseVal;
@@ -175,13 +175,15 @@
       var pad = 40;
       var sx = (cw - pad) / sw;
       var sy = (ch - pad) / sh;
-      zoomScale = Math.min(Math.max(sx, sy), 1);
-      zoomTx = (cw - sw * zoomScale) / 2;
-      zoomTy = (ch - sh * zoomScale) / 2;
+      fitScale = Math.max(sx, sy);
+      zoomScale = 1;
+      zoomTx = (cw - sw * fitScale * zoomScale) / 2;
+      zoomTy = (ch - sh * fitScale * zoomScale) / 2;
     } else {
+      fitScale = 1;
+      zoomScale = 1;
       zoomTx = 0;
       zoomTy = 0;
-      zoomScale = 1;
     }
     applyZoom();
   }
@@ -193,7 +195,32 @@
     applyZoom();
   }
 
-  function renderDiagram(mermaidCode, theme) {
+  function syncAnnotationFontSize() {
+    var overlay = document.getElementById('annotations-overlay');
+    var svg = document.querySelector('#mermaid-preview svg');
+    var svgText = svg ? svg.querySelector('text') : null;
+    var stage = document.getElementById('preview-stage');
+    if (!overlay || !svg || !stage) return;
+    if (svgText) {
+      var cssFontSize = parseFloat(window.getComputedStyle(svgText).fontSize);
+      if (!cssFontSize) { overlay.style.removeProperty('--annotation-font-size'); return; }
+      var prevTransform = stage.style.transform;
+      stage.style.transform = '';
+      var layoutWidth = svg.getBoundingClientRect().width;
+      stage.style.transform = prevTransform;
+      var vb = svg.viewBox.baseVal;
+      if (vb.width && layoutWidth) {
+        var visualFontSize = Math.round(cssFontSize * layoutWidth / vb.width);
+        overlay.style.setProperty('--annotation-font-size', visualFontSize + 'px');
+      } else {
+        overlay.style.setProperty('--annotation-font-size', cssFontSize + 'px');
+      }
+    } else {
+      overlay.style.removeProperty('--annotation-font-size');
+    }
+  }
+
+  function renderDiagram(mermaidCode, theme, onAfterRender) {
     var previewDiv = document.getElementById('mermaid-preview');
     var errorDiv = document.getElementById('preview-error');
     if (!mermaidCode || mermaidCode.trim() === '') {
@@ -206,7 +233,10 @@
     mermaid.render(id, mermaidCode).then(function (r) {
       previewDiv.innerHTML = r.svg;
       errorDiv.style.display = 'none';
-      requestAnimationFrame(function () { zoomToFit(); });
+      requestAnimationFrame(function () {
+        syncAnnotationFontSize();
+        if (onAfterRender) onAfterRender();
+      });
     }).catch(function (err) {
       previewDiv.innerHTML = '';
       errorDiv.style.display = 'block';
@@ -238,6 +268,7 @@
     }, 500);
     var parsed = parseMmd(lines.join('\n'));
     renderAnnotations(parsed.annotations);
+    syncAnnotationFontSize();
   }
 
   function renderAnnotations(annotations) {
@@ -275,8 +306,8 @@
         note.classList.add('dragging');
 
         function onMove(me) {
-          var dx = (me.clientX - dragStartX) / zoomScale;
-          var dy = (me.clientY - dragStartY) / zoomScale;
+          var dx = (me.clientX - dragStartX) / (zoomScale * fitScale);
+          var dy = (me.clientY - dragStartY) / (zoomScale * fitScale);
           note.style.left = (noteStartLeft + dx) + 'px';
           note.style.top = (noteStartTop + dy) + 'px';
         }
@@ -394,7 +425,7 @@
       document.getElementById('file-name').textContent = parsed.frontmatter.title;
     }
     await initEditor(content, currentTheme, function () { handleContentChange(); });
-    renderDiagram(parsed.mermaidCode, currentTheme);
+    renderDiagram(parsed.mermaidCode, currentTheme, zoomToFit);
     renderAnnotations(parsed.annotations);
     ipcRenderer.on('file:external-change', function (_e, newContent) {
       setEditorContent(newContent);
