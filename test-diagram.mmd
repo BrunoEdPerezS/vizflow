@@ -14,7 +14,8 @@ graph TD
     G -->|Yes| H[Monitor]
     G -->|No| I[Rollback]
     H --> J[Profit]
+    J --> |Si|D
     I --> D
 
 %%# @280,12 System flow from start to production
-%%# @-98,105 Debug loop ensures quality
+%%# @-152,230 Debug loop ensures quality
