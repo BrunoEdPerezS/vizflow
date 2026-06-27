@@ -4,16 +4,16 @@ Subagente de opencode que genera diagramas Mermaid en formato `.mmd` a partir de
 
 ## Instalacion
 
-Copiar el archivo `grapher.md` a la carpeta de agentes de opencode:
+Copiar el archivo `Grapher.md` a la carpeta de agentes de opencode:
 
 **Windows (PowerShell):**
 ```powershell
-Copy-Item agent\grapher.md "$env:USERPROFILE\.config\opencode\agents\grapher.md"
+Copy-Item agent\Grapher.md "$env:USERPROFILE\.config\opencode\agents\Grapher.md"
 ```
 
 **Linux / macOS:**
 ```bash
-cp agent/grapher.md ~/.config/opencode/agents/grapher.md
+cp agent/Grapher.md ~/.config/opencode/agents/Grapher.md
 ```
 
 ## Verificacion

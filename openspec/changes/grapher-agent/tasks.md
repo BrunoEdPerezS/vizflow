@@ -32,6 +32,6 @@
 ## 5. Verification
 
 - [x] 5.1 Copy `grapher.md` to `~/.config/opencode/agents/`
-- [ ] 5.2 Verify `@Grapher` appears in opencode autocompletion
-- [ ] 5.3 Test: `@Grapher crea un diagrama flowchart de un login con email y password`
-- [ ] 5.4 Verify generated .mmd opens correctly in Vizflow
+- [x] 5.2 Verify `@Grapher` appears in opencode autocompletion
+- [x] 5.3 Test: `@Grapher crea un diagrama flowchart de un login con email y password`
+- [x] 5.4 Verify generated .mmd opens correctly in Vizflow
