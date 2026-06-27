@@ -1,0 +1,55 @@
+---
+title: Mapa de Wardley - Negocio de Venta e Instalación de Paneles Solares
+theme: dark
+---
+
+flowchart LR
+    subgraph V["🟢 CAPA VISIBLE"]
+        direction LR
+        V_MKT["Marketing y Ventas<br/>al Cliente"]
+        V_COT["Plataforma de<br/>Cotización Online"]
+        V_INS["Equipo de<br/>Instaladores"]
+        V_GES["Gestión de Proyectos<br/>de Instalación"]
+        V_MKT ~~~ V_COT ~~~ V_INS ~~~ V_GES
+    end
+
+    subgraph I["🟡 CAPA INTERMEDIA"]
+        direction LR
+        I_FAB["Relación con<br/>Fabricantes de Paneles"]
+        I_LOG["Logística y<br/>Almacén"]
+        I_CER["Certificaciones<br/>y Regulaciones"]
+        I_FIN["Financiamiento y<br/>Leasing Solar"]
+        I_FAB ~~~ I_LOG ~~~ I_CER ~~~ I_FIN
+    end
+
+    subgraph B["🔵 CAPA INVISIBLE"]
+        direction LR
+        B_MON["Monitoreo<br/>Post-instalación"]
+        B_ELE["Componentes Eléctricos<br/>Inversores, Baterías"]
+        B_PAN["Paneles<br/>Solares"]
+        B_MON ~~~ B_ELE ~~~ B_PAN
+    end
+
+    subgraph EVO["⬇ Eje de Evolución ⬇"]
+        direction LR
+        E1["🌱 Génesis"]
+        E2["🔧 Custom"]
+        E3["📦 Producto"]
+        E4["🏭 Commodity"]
+        E1 ~~~ E2 ~~~ E3 ~~~ E4
+    end
+
+    %% ── Dependencias clave entre componentes ──
+    V_MKT --> V_COT
+    V_COT --> V_GES
+    V_GES --> V_INS
+    V_GES --> I_LOG
+    V_GES --> I_CER
+    I_FAB --> I_LOG
+    I_FAB --> B_PAN
+    V_INS --> B_ELE
+    V_INS --> B_PAN
+    V_COT --> I_FIN
+    B_ELE --> B_MON
+
+    

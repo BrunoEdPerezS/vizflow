@@ -117,6 +117,7 @@ function closeFile(targetPath) {
     } else {
       activeFilePath = null;
       updateWindowTitle();
+      mainWindow.webContents.send('tab:removed', { removedPath: targetPath, newActivePath: null });
     }
   } else {
     mainWindow.webContents.send('tab:removed', { removedPath: targetPath, newActivePath: activeFilePath });
@@ -150,6 +151,19 @@ function buildMenu() {
           accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
           role: 'quit'
         }
+      ]
+    },
+    {
+      label: 'Editar',
+      submenu: [
+        { label: 'Deshacer', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+        { label: 'Rehacer', accelerator: 'CmdOrCtrl+Y', role: 'redo' },
+        { type: 'separator' },
+        { label: 'Cortar', role: 'cut' },
+        { label: 'Copiar', role: 'copy' },
+        { label: 'Pegar', role: 'paste' },
+        { type: 'separator' },
+        { label: 'Seleccionar todo', role: 'selectAll' }
       ]
     }
   ];

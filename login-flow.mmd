@@ -4,7 +4,6 @@ theme: dark
 ---
 
 flowchart TD
-    A([User visits login page])
     B[Enter email and password]
     C{"Forgot\npassword?"}
     D[Enter email for reset]
@@ -25,13 +24,12 @@ flowchart TD
     Q["Prompt: 'Verify your email'\nResend verification link"]
     R[Store token\nRedirect to dashboard]
 
-    A --> B
     B --> C
     C -->|"Forgot"| D
     C -->|"Login"| F
     D --> O
     O --> E
-    E --> A
+    E --> B
 
     F -->|"Empty fields"| G
     G --> B

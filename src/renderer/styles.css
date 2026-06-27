@@ -137,10 +137,21 @@
 #preview-pane {
   flex: 1;
   min-width: 200px;
-  border-left: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
   background: var(--bg-secondary);
+}
+
+#pane-divider {
+  width: 4px;
+  cursor: col-resize;
+  background: var(--border-color);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+#pane-divider:hover {
+  background: var(--accent-color);
 }
 
 #editor-container {

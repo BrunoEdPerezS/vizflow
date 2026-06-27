@@ -16,9 +16,9 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Launch `vizflow` with no arguments and verify window opens with untitled.mmd template (no error dialog)
-- [ ] 3.2 Open `login-flow.mmd` via CLI, then use `Archivo > Abrir...` to switch to another `.mmd` file
-- [ ] 3.3 Verify window title updates after switching files
-- [ ] 3.4 Verify Ctrl+O opens the file dialog
-- [ ] 3.5 Verify file watcher tracks the newly opened file (external LLM edits are reflected)
-- [ ] 3.6 Verify canceling the file dialog preserves current diagram state
+- [x] 3.1 Launch `vizflow` with no arguments and verify window opens with untitled.mmd template (no error dialog)
+- [x] 3.2 Open `login-flow.mmd` via CLI, then use `Archivo > Abrir...` to switch to another `.mmd` file
+- [x] 3.3 Verify window title updates after switching files
+- [x] 3.4 Verify Ctrl+O opens the file dialog
+- [x] 3.5 Verify file watcher tracks the newly opened file (external LLM edits are reflected)
+- [x] 3.6 Verify canceling the file dialog preserves current diagram state

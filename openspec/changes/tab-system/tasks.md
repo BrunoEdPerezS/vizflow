@@ -71,10 +71,10 @@
 
 ## 11. Verification
 
-- [ ] 11.1 Launch `vizflow file1.mmd file2.mmd` and verify both open in tabs, file1 active
-- [ ] 11.2 Use Archivo > Abrir to open a third file; verify it appears as a new active tab
-- [ ] 11.3 Click between tabs and verify editor content, preview, and zoom/pan state are preserved
-- [ ] 11.4 Edit tab A, switch to tab B, switch back to A — verify undo history and cursor preserved
-- [ ] 11.5 Press Alt+1, Alt+2 to switch tabs; press Ctrl+W to close a tab
-- [ ] 11.6 Verify LLM external edits are routed to the correct tab
-- [ ] 11.7 Verify window title updates on tab switch
+- [x] 11.1 Launch `vizflow file1.mmd file2.mmd` and verify both open in tabs, file1 active
+- [x] 11.2 Use Archivo > Abrir to open a third file; verify it appears as a new active tab
+- [x] 11.3 Click between tabs and verify editor content, preview, and zoom/pan state are preserved
+- [x] 11.4 Edit tab A, switch to tab B, switch back to A — verify undo history and cursor preserved
+- [x] 11.5 Press Alt+1, Alt+2 to switch tabs; press Ctrl+W to close a tab
+- [x] 11.6 Verify LLM external edits are routed to the correct tab
+- [x] 11.7 Verify window title updates on tab switch

@@ -187,6 +187,38 @@
           renderWhitespace: 'selection',
           bracketPairColorization: { enabled: true }
         });
+        var { clipboard } = nodeRequire('electron');
+        var editorNode = editor.getContainerDomNode();
+        editorNode.addEventListener('keydown', function (e) {
+          var ctrl = e.ctrlKey || e.metaKey;
+          if (ctrl && e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            e.stopPropagation();
+            var sel = editor.getSelection();
+            if (!sel.isEmpty()) {
+              clipboard.writeText(editor.getModel().getValueInRange(sel));
+            }
+          } else if (ctrl && e.key.toLowerCase() === 'v') {
+            e.preventDefault();
+            e.stopPropagation();
+            var text = clipboard.readText();
+            if (text) {
+              editor.executeEdits('paste', [{ range: editor.getSelection(), text: text }]);
+            }
+          } else if (ctrl && e.key.toLowerCase() === 'x') {
+            e.preventDefault();
+            e.stopPropagation();
+            var sel = editor.getSelection();
+            if (!sel.isEmpty()) {
+              clipboard.writeText(editor.getModel().getValueInRange(sel));
+              editor.executeEdits('cut', [{ range: sel, text: '' }]);
+            }
+          } else if (ctrl && e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.setSelection(editor.getModel().getFullModelRange());
+          }
+        }, true);
         editor.onDidChangeModelContent(function () {
           var tab = TabManager.getActiveTab();
           if (!tab) return;
@@ -238,7 +270,7 @@
     var cy = container.clientHeight / 2;
     var factor = direction > 0 ? 1.2 : 1 / 1.2;
     var newScale = zoomScale * factor;
-    newScale = Math.max(0.1, Math.min(5, newScale));
+    newScale = Math.max(0.1, Math.min(8, newScale));
     var ratio = newScale / zoomScale;
     zoomTx = cx - ratio * (cx - zoomTx);
     zoomTy = cy - ratio * (cy - zoomTy);
@@ -523,6 +555,20 @@
     }
   }
 
+  function clearEditorAndPreview() {
+    if (editor && editor.getModel()) {
+      editor.setModel(null);
+    }
+    var previewDiv = document.getElementById('mermaid-preview');
+    if (previewDiv) {
+      previewDiv.innerHTML = '<p style="color: var(--text-secondary); font-style: italic;">Abrir archivo para empezar (CTRL+O)</p>';
+    }
+    var overlay = document.getElementById('annotations-overlay');
+    if (overlay) { overlay.innerHTML = ''; }
+    document.getElementById('file-name').textContent = 'diagram';
+    currentFileBasename = 'diagram';
+  }
+
   function renderTabBar() {
     var bar = document.getElementById('tab-bar');
     if (!bar) return;
@@ -552,6 +598,8 @@
         if (remaining.length > 0) {
           var nextId = remaining[0];
           TabManager.switchTab(nextId);
+        } else {
+          clearEditorAndPreview();
         }
         renderTabBar();
       });
@@ -628,6 +676,8 @@
   function onTabRemoved(_e, payload) {
     if (payload.newActivePath) {
       TabManager.switchTab(payload.newActivePath);
+    } else {
+      clearEditorAndPreview();
     }
     renderTabBar();
   }
@@ -661,7 +711,7 @@
       var my = e.clientY - rect.top;
       var factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
       var newScale = zoomScale * factor;
-      newScale = Math.max(0.1, Math.min(5, newScale));
+      newScale = Math.max(0.1, Math.min(8, newScale));
       if (newScale === zoomScale) return;
       var ratio = newScale / zoomScale;
       zoomTx = mx - ratio * (mx - zoomTx);
@@ -700,6 +750,48 @@
     });
   }
 
+  function setupPaneResize() {
+    var divider = document.getElementById('pane-divider');
+    var editorPane = document.getElementById('editor-pane');
+    var previewPane = document.getElementById('preview-pane');
+    var mainContent = document.getElementById('main-content');
+    if (!divider || !editorPane || !previewPane || !mainContent) return;
+
+    var isResizing = false;
+    var startX = 0;
+    var startEditorWidth = 0;
+
+    divider.addEventListener('mousedown', function (e) {
+      isResizing = true;
+      startX = e.clientX;
+      startEditorWidth = editorPane.getBoundingClientRect().width;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function (e) {
+      if (!isResizing) return;
+      var dx = e.clientX - startX;
+      var newWidth = startEditorWidth + dx;
+      var totalWidth = mainContent.getBoundingClientRect().width;
+      var minPx = 200;
+      var maxPx = totalWidth - 204;
+      newWidth = Math.max(minPx, Math.min(maxPx, newWidth));
+      var percent = (newWidth / totalWidth) * 100;
+      editorPane.style.flex = '0 0 ' + percent + '%';
+      previewPane.style.flex = '0 0 ' + (100 - percent) + '%';
+      if (editor) editor.layout();
+    });
+
+    window.addEventListener('mouseup', function () {
+      if (!isResizing) return;
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+  }
+
   function start() {
     ipcRenderer.on('tabs:init', onTabsInit);
     ipcRenderer.on('tab:open', onTabOpen);
@@ -709,6 +801,7 @@
 
     initEditor('', currentTheme, function () { handleContentChange(); }).then(function () {
       setupZoomPan();
+      setupPaneResize();
     });
 
     window.addEventListener('keydown', function (e) {
